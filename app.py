@@ -4,12 +4,16 @@ Track positions, daily/total % moves, and a target-price scenario.
 
 Run locally:   streamlit run portfolio_tracker_app.py
 Deploy:        push to a repo + deploy on Streamlit Community Cloud,
-                same as your LP app. Positions are saved to portfolio_data.csv
-                next to this file, so on Streamlit Cloud they'll persist
-                between sessions but reset on redeploy unless you wire up
-                a real DB/gist — fine for personal use, flag it if you want
-                that upgraded.
+                same as your LP app.
+
+Persistence:   No database. Positions live in the browser session and in a
+                local CSV (portfolio_data.csv) when run locally. On Streamlit
+                Cloud the filesystem is ephemeral, so use the "Download
+                positions" button before you close the tab, and the
+                "Restore from CSV" uploader when you come back to reload
+                exactly where you left off.
 """
+
 
 import os
 import pandas as pd
@@ -89,6 +93,31 @@ st.caption(
     "Edit prices directly in the table below. Add rows with the ➕ at the bottom, "
     "delete with the row checkbox + trash icon. Target price is optional."
 )
+
+# ---------------------------------------------------------------- restore from file
+
+with st.expander("📤 Restore from a downloaded CSV", expanded=False):
+    uploaded_file = st.file_uploader(
+        "Upload a positions CSV you previously downloaded",
+        type="csv",
+        key="restore_uploader",
+    )
+    if uploaded_file is not None:
+        file_hash = hash(uploaded_file.getvalue())
+        if st.session_state.get("last_uploaded_hash") != file_hash:
+            try:
+                df_up = pd.read_csv(uploaded_file)
+                missing = [c for c in COLUMNS if c not in df_up.columns]
+                if missing:
+                    st.error(f"CSV is missing columns: {', '.join(missing)}")
+                else:
+                    st.session_state.portfolio = df_up[COLUMNS]
+                    st.session_state.last_uploaded_hash = file_hash
+                    save_data(st.session_state.portfolio)
+                    st.success(f"Loaded {len(df_up)} position(s) from file.")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Couldn't read that file: {e}")
 
 # ---------------------------------------------------------------- editable table
 
@@ -232,8 +261,11 @@ else:
 
 st.divider()
 st.download_button(
-    "Download positions as CSV",
+    "⬇️ Download positions as CSV",
     df[COLUMNS].to_csv(index=False).encode("utf-8"),
     file_name="portfolio_positions.csv",
     mime="text/csv",
+    help="Save this before closing the tab on Streamlit Cloud — upload it "
+         "next time using the 'Restore from a downloaded CSV' box above to "
+         "pick up right where you left off.",
 )
