@@ -6,6 +6,11 @@ Run locally:   streamlit run portfolio_tracker_app.py
 Deploy:        push to a repo + deploy on Streamlit Community Cloud,
                 same as your LP app.
 
+Live prices:  Click "Refresh prices" to pull current price + previous close
+                for every ticker from Yahoo Finance via yfinance (free, no
+                API key). You can still hand-edit any price in the table —
+                a refresh will overwrite it with the live value.
+
 Persistence:   No database. Positions live in the browser session and in a
                 local CSV (portfolio_data.csv) when run locally. On Streamlit
                 Cloud the filesystem is ephemeral, so use the "Download
@@ -16,10 +21,12 @@ Persistence:   No database. Positions live in the browser session and in a
 
 
 import os
+import time
 import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
+import yfinance as yf
 
 # ---------------------------------------------------------------- config
 
@@ -80,6 +87,42 @@ def save_data(df: pd.DataFrame):
 if "portfolio" not in st.session_state:
     st.session_state.portfolio = load_data()
 
+
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_price(ticker: str):
+    """Returns (current_price, prev_close) or (None, None) if the lookup fails."""
+    try:
+        t = yf.Ticker(ticker)
+        info = t.fast_info
+        current = getattr(info, "last_price", None)
+        prev = getattr(info, "previous_close", None)
+        if current is None:
+            hist = t.history(period="5d")
+            if not hist.empty:
+                current = float(hist["Close"].iloc[-1])
+                prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else current
+        if current is None:
+            return None, None
+        if prev is None:
+            prev = current
+        return float(current), float(prev)
+    except Exception:
+        return None, None
+
+
+def refresh_all_prices(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """Fetches live prices for every ticker in df, returns updated df + list of failures."""
+    df = df.copy()
+    failed = []
+    for i, row in df.iterrows():
+        current, prev = fetch_price(row["ticker"])
+        if current is None:
+            failed.append(row["ticker"])
+            continue
+        df.at[i, "current_price"] = current
+        df.at[i, "prev_close"] = prev
+    return df, failed
+
 # ---------------------------------------------------------------- header
 
 st.markdown(
@@ -93,6 +136,32 @@ st.caption(
     "Edit prices directly in the table below. Add rows with the ➕ at the bottom, "
     "delete with the row checkbox + trash icon. Target price is optional."
 )
+
+# ---------------------------------------------------------------- live price refresh
+
+rc1, rc2 = st.columns([1, 3])
+with rc1:
+    refresh_clicked = st.button("🔄 Refresh prices", use_container_width=True)
+with rc2:
+    last_updated = st.session_state.get("last_price_update")
+    if last_updated:
+        st.caption(f"Prices last pulled {last_updated}")
+    else:
+        st.caption("Prices haven't been pulled from Yahoo Finance yet — click Refresh.")
+
+if refresh_clicked:
+    tickers = st.session_state.portfolio["ticker"].dropna().tolist()
+    if tickers:
+        with st.spinner(f"Pulling live prices for {len(tickers)} ticker(s)…"):
+            updated_df, failed = refresh_all_prices(st.session_state.portfolio)
+        st.session_state.portfolio = updated_df
+        save_data(updated_df)
+        st.session_state.last_price_update = time.strftime("%b %d, %I:%M %p")
+        if failed:
+            st.warning(f"Couldn't fetch: {', '.join(failed)} — check the ticker symbol.")
+        else:
+            st.success("Prices updated.")
+        st.rerun()
 
 # ---------------------------------------------------------------- restore from file
 
