@@ -49,6 +49,19 @@ COLUMNS = ["ticker", "shares", "buy_price", "current_price", "prev_close", "targ
 st.markdown(
     f"""
     <style>
+    /* Force dark background everywhere, regardless of whether
+       .streamlit/config.toml made it into the deploy — don't rely on
+       theme config alone. */
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stHeader"],
+    [data-testid="stMain"],
+    [data-testid="stSidebar"],
+    .main, .block-container {{
+        background-color: {INK} !important;
+    }}
+    [data-testid="stHeader"] {{ background-color: transparent !important; }}
+
     /* Cards for st.metric */
     [data-testid="stMetric"] {{
         background: {PANEL};
@@ -71,25 +84,26 @@ st.markdown(
     h1, h2, h3 {{ color: {TEXT_LIGHT} !important; }}
 
     /* Body / markdown text */
-    p, li, label, span {{ color: {TEXT_LIGHT}; }}
+    p, li, label, span, div {{ color: {TEXT_LIGHT}; }}
 
     /* Buttons */
     .stButton button, .stDownloadButton button {{
-        background: {PANEL};
-        color: {TEXT_LIGHT};
-        border: 1px solid #2A3140;
+        background: {PANEL} !important;
+        color: {TEXT_LIGHT} !important;
+        border: 1px solid #2A3140 !important;
     }}
     .stButton button:hover, .stDownloadButton button:hover {{
-        border-color: {AMBER};
-        color: {AMBER};
+        border-color: {AMBER} !important;
+        color: {AMBER} !important;
     }}
 
     /* Expander */
     [data-testid="stExpander"] {{
-        background: {PANEL};
+        background: {PANEL} !important;
         border: 1px solid #2A3140;
         border-radius: 10px;
     }}
+    [data-testid="stExpander"] summary {{ color: {TEXT_LIGHT} !important; }}
 
     /* Data editor / dataframe */
     [data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
@@ -99,9 +113,10 @@ st.markdown(
 
     /* File uploader drop zone */
     [data-testid="stFileUploaderDropzone"] {{
-        background: {PANEL};
+        background: {PANEL} !important;
         border: 1px dashed #2A3140;
     }}
+    [data-testid="stFileUploaderDropzone"] * {{ color: {TEXT_LIGHT} !important; }}
 
     hr {{ border-color: #2A3140 !important; }}
     </style>
