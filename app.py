@@ -35,11 +35,12 @@ st.set_page_config(page_title="Portfolio Ledger", page_icon="📒", layout="wide
 DATA_FILE = os.path.join(os.path.dirname(__file__), "portfolio_data.csv")
 
 AMBER = "#F5A623"
-GREEN = "#3ECF8E"
-RED = "#FF5C6C"
+GREEN = "#4ADE9A"
+RED = "#FF6B78"
 INK = "#0A0D12"
-PANEL = "#12161F"
-MUTED = "#767F8F"
+PANEL = "#171C27"
+MUTED = "#9AA3B5"
+TEXT_LIGHT = "#F2F1EC"
 
 COLUMNS = ["ticker", "shares", "buy_price", "current_price", "prev_close", "target_price"]
 
@@ -48,15 +49,61 @@ COLUMNS = ["ticker", "shares", "buy_price", "current_price", "prev_close", "targ
 st.markdown(
     f"""
     <style>
-    .stApp {{ background-color: {INK}; }}
+    /* Cards for st.metric */
     [data-testid="stMetric"] {{
         background: {PANEL};
-        border: 1px solid #232A38;
+        border: 1px solid #2A3140;
         border-radius: 10px;
         padding: 12px 14px;
     }}
-    [data-testid="stMetricLabel"] {{ color: {MUTED}; }}
-    h1, h2, h3 {{ font-family: 'IBM Plex Sans', sans-serif; }}
+    [data-testid="stMetricLabel"] {{ color: {MUTED} !important; }}
+    [data-testid="stMetricValue"] {{ color: {TEXT_LIGHT} !important; }}
+    [data-testid="stMetricDelta"] {{ color: {MUTED} !important; }}
+
+    /* Captions and helper text — force a legible light grey, not the
+       library default which assumes a light background */
+    [data-testid="stCaptionContainer"], .stCaption, small {{
+        color: {MUTED} !important;
+        opacity: 1 !important;
+    }}
+
+    /* Headings */
+    h1, h2, h3 {{ color: {TEXT_LIGHT} !important; }}
+
+    /* Body / markdown text */
+    p, li, label, span {{ color: {TEXT_LIGHT}; }}
+
+    /* Buttons */
+    .stButton button, .stDownloadButton button {{
+        background: {PANEL};
+        color: {TEXT_LIGHT};
+        border: 1px solid #2A3140;
+    }}
+    .stButton button:hover, .stDownloadButton button:hover {{
+        border-color: {AMBER};
+        color: {AMBER};
+    }}
+
+    /* Expander */
+    [data-testid="stExpander"] {{
+        background: {PANEL};
+        border: 1px solid #2A3140;
+        border-radius: 10px;
+    }}
+
+    /* Data editor / dataframe */
+    [data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
+        border: 1px solid #2A3140;
+        border-radius: 8px;
+    }}
+
+    /* File uploader drop zone */
+    [data-testid="stFileUploaderDropzone"] {{
+        background: {PANEL};
+        border: 1px dashed #2A3140;
+    }}
+
+    hr {{ border-color: #2A3140 !important; }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -314,7 +361,7 @@ else:
         barmode="group",
         plot_bgcolor=PANEL,
         paper_bgcolor=PANEL,
-        font_color="#E9E7E0",
+        font_color=TEXT_LIGHT,
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
         margin=dict(l=10, r=10, t=40, b=10),
         height=max(220, 60 * len(df)),
